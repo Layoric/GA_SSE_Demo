@@ -260,6 +260,9 @@
             if(!changedExternal)
                 $.getJSON('/slide?PageNumber=' + (slide.getSlideIndex() + 1) + '&From=' + window.subscription.id);
         });
+        slideshow.on('beforeShowSlide', function (slide, e) {
+            changedExternal = false;
+        });
         var source = new EventSource('/event-stream?channel=slideShow&t=' + new Date().getTime());
         $(source).handleServerEvents({
             handlers: {
