@@ -223,6 +223,7 @@
             if(!changedExternal)
                 $.getJSON('/slide?PageNumber=' + (slide.getSlideIndex() + 1) +
                     '&From=' + window.subscription.id);
+            changedExternal = false;
         });
         var source = new EventSource('/event-stream?channel=slideShow&t=' +
                         new Date().getTime());
@@ -232,7 +233,6 @@
                     window.subscription = subscription;
                 },
                 GotoSlidePage: function (msg, e) {
-                    changedExternal = false;
                     var sentByMe = msg.From == window.subscription.id;
                     if(!sentByMe &&
                             msg.PageNumber != (slideshow.getCurrentSlideIndex() + 1)) {
