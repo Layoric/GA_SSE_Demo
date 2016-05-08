@@ -13,7 +13,6 @@ namespace ServiceStackSseExample.ServiceInterface
 
         public GotoSlidePageResponse Any(GotoSlidePage request)
         {
-            request.PageNumber++;
             ServerEvents.NotifyAll(request);
             return request.ConvertTo<GotoSlidePageResponse>();
         }

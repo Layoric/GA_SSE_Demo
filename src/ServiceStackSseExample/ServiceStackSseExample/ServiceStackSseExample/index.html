@@ -219,19 +219,26 @@
 
         ``` JavaScript
         var slideshow = remark.create();
-        slideshow.on('showSlide', function (slide, e) {
-            $.getJSON('/slide?PageNumber=' + slide.getSlideIndex());
+        slideshow.on('beforeShowSlide', function (slide, e) {
+            if(!changedExternal)
+                $.getJSON('/slide?PageNumber=' + (slide.getSlideIndex() + 1) +
+                    '&From=' + window.subscription.id);
         });
-        var source = new EventSource('/event-stream?channel=slideShow&t='
-            + new Date().getTime());
-        source.addEventListener('error', function (e) {
-            console.log("ERROR!", e);
-        }, false);
-
+        var source = new EventSource('/event-stream?channel=slideShow&t=' +
+                        new Date().getTime());
         $(source).handleServerEvents({
             handlers: {
+                onConnect: function (subscription) {
+                    window.subscription = subscription;
+                },
                 GotoSlidePage: function (msg, e) {
-                    slideshow.gotoSlide(msg.PageNumber);
+                    changedExternal = false;
+                    var sentByMe = msg.From == window.subscription.id;
+                    if(!sentByMe &&
+                            msg.PageNumber != (slideshow.getCurrentSlideIndex() + 1)) {
+                        changedExternal = true;
+                        slideshow.gotoSlide(msg.PageNumber);
+                    }
                 }
             }
         });
@@ -245,22 +252,31 @@
     <script src="js/remark.js">
     </script>
     <script>
+        var sentByMe = false;
+        var changedExternal = false;
+
         var slideshow = remark.create();
-        slideshow.on('showSlide', function (slide, e) {
-            $.getJSON('/slide?PageNumber=' + slide.getSlideIndex());
+        slideshow.on('beforeShowSlide', function (slide, e) {
+            if(!changedExternal)
+                $.getJSON('/slide?PageNumber=' + (slide.getSlideIndex() + 1) + '&From=' + window.subscription.id);
         });
         var source = new EventSource('/event-stream?channel=slideShow&t=' + new Date().getTime());
-        source.addEventListener('error', function (e) {
-            console.log("ERROR!", e);
-        }, false);
-
         $(source).handleServerEvents({
             handlers: {
+                onConnect: function (subscription) {
+                    window.subscription = subscription;
+                },
                 GotoSlidePage: function (msg, e) {
-                    slideshow.gotoSlide(msg.PageNumber);
+                    changedExternal = false;
+                    var sentByMe = msg.From == window.subscription.id;
+                    if(!sentByMe && msg.PageNumber != (slideshow.getCurrentSlideIndex() + 1)) {
+                        changedExternal = true;
+                        slideshow.gotoSlide(msg.PageNumber);
+                    }
                 }
             }
         });
+
     </script>
 </body>
 </html>

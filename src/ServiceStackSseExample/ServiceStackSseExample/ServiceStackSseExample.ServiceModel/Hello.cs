@@ -21,6 +21,7 @@ namespace ServiceStackSseExample.ServiceModel
     public class GotoSlidePage
     {
         public int PageNumber { get; set; }
+        public string From { get; set; }
     }
 
     public class GotoSlidePageResponse
