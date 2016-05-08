@@ -38,13 +38,15 @@
 
         - What is Server Sent Events (SSE)?
 
-        - Advantages/Disadvantages
+        - How does it work?
 
         - When would you use it?
 
         - Which platforms support it?
 
         - Working with SSE
+
+        - Advantages/Disadvantages
 
         - Demo
         ---
@@ -59,17 +61,17 @@
 
         ---
         # How does it work?
-        HTTP streaming
-        MIME Type `text/event-stream`
-        Long lived connection
-        Events split by `\n` (or `\n\n` when used with `data` field)
-        Client events are `onmessage`, `onconnection` and `onerror`.
-        Simple specification, W3C spec ~9 pages.
+        - HTTP streaming
+        - MIME Type `text/event-stream`
+        - Long lived connection
+        - Events split by `\n` (or `\n\n` when used with `data` field)
+        - Client events are `onmessage`, `onconnection` and `onerror`.
+        - Simple specification, W3C spec ~9 pages.
         ---
         # When would you use it / Common use cases?
-        - Push updates to users for semi real time data.
-        - Broadcasting changes to a group of users
-        - Anytime you have a feature that might cause users to hit 'Refresh' for new data.
+        - Push updates to users for real time data.
+        - Broadcasting changes to a group of users of a common view
+        - Anytime you have a feature that might cause users to hit 'Refresh' for new data, do it for them!
 
         # When NOT to use it
         - Mission/User critical updates
@@ -80,7 +82,7 @@
 
         ### Clients
         - Browsers
-        - Any native client that supports streaming HTTP!
+        - Any native clients that supports streaming HTTP! (Hint a lot)
         - Simple spec = Simple implementation
         - Many OSS Clients on GitHub
 
@@ -94,65 +96,151 @@
 
         ---
         # Working with SSE - The Theme is "Simple".
+        Example of using browser `EventSource`.
+        ``` JavaScript
+        var source = new EventSource('/event-stream?t=' + new Date().getTime());
+
+        source.onconnection = function(function(c) {
+            console.log(c);
+        };
+
+        source.onmessage = function(msg) {
+            console.log(msg);
+        };
+    
+        // Or can be declared as
+        source.addEventListener('error', function (e) {
+            console.log("ERROR!", e);
+        });
+        ```
+        - Message can be either text or structured (eg JSON), interpretation is up to client.
         ---
-        ### NodeJS Server usage
+        # NodeJS Server
         ``` JavaScript
         var SSE = require('sse')
         , http = require('http');
 
         var server = http.createServer(function(req, res) {
-        res.writeHead(200, {'Content-Type': 'text/plain'});
-        res.end('okay');
+            res.writeHead(200, {'Content-Type': 'text/plain'});
+            res.end('okay');
         });
 
         server.listen(8080, '127.0.0.1', function() {
-        var sse = new SSE(server);
-        sse.on('connection', function(client) {
-        client.send('hi there!');
+            var sse = new SSE(server);
+            sse.on('connection', function(client) {
+                client.send('hi there!');
+            });
         });
-        });
-        ```
-
-        ### JavaScript client
-        ``` JavaScript
-        var es = new EventSource("/sse");
-        es.onmessage = function (event) {
-        console.log(event.data);
-        };
         ```
         ---
-        # Spring Boot
+        # Spring Boot Server
         ``` Java
+        private final List<SseEmitter> emitters = new ArrayList<>();
+
         @RequestMapping(path = "/sse", method = RequestMethod.GET)
         public SseEmitter stream() throws IOException {
-        SseEmitter emitter = new SseEmitter();
-        emitters.add(emitter);
-        emitter.onCompletion(() -> emitters.remove(emitter));
-        return emitter;
+            SseEmitter emitter = new SseEmitter();
+            emitters.add(emitter);
+            emitter.onCompletion(() -> emitters.remove(emitter));
+            return emitter;
+        }
+
+        @ResponseBody
+        @RequestMapping(path = "/chat", method = RequestMethod.POST)
+        public Message sendMessage(@Valid Message message) {
+            emitters.forEach((emitter) -> {
+                try {
+                    emitter.send(message, MediaType.APPLICATION_JSON);
+                } catch (IOException e) {
+                    emitter.complete();
+                    emitters.remove(emitter);
+                    e.printStackTrace();
+                }
+            });
+            return message;
         }
         ```
-        ### JavaScript client
-        ``` JavaScript
-        var es = new EventSource("/sse");
-        es.onmessage = function (event) {
-        console.log(event.data);
-        };
+        ---
+        # Ruby on Rails Server
+        ``` Ruby
+        class MyController < ActionController::Base
+          include ActionController::Live
+
+          def index
+            response.headers['Content-Type'] = 'text/event-stream'
+            sse = SSE.new(response.stream, retry: 300, event: "event-name")
+            sse.write({ name: 'John'})
+            sse.write({ name: 'John'}, id: 10)
+            sse.write({ name: 'John'}, id: 10, event: "other-event")
+            sse.write({ name: 'John'}, id: 10, event: "other-event", retry: 500)
+          ensure
+            sse.close
+          end
+        end
+        ```
+        ---
+        # ASP.NET Server (ServiceStack)
+        - AppHost
+
+        ``` CSharp
+        public override void Configure(Container container)
+        {
+            this.Plugins.Add(new ServerEventsFeature());
+        }
+        ```
+        - Service
+
+        ``` CSharp
+        public IServerEvents ServerEvents { get; set; }
+
+        public GotoSlidePageResponse Get(GotoSlidePage request)
+        {
+            request.PageNumber++;
+            ServerEvents.NotifyAll(request);
+            return request.ConvertTo<GotoSlidePageResponse>();
+        }
         ```
         ---
         # Advantages
         - Simple to implement, leverages HTTP
         - Decent client support for free
-        - Can perform well at ~30K connected clients.
+        - Can perform well.
         - Only does 1 thing, pushes data to clients. Again, simple.
 
         # Disadvantages
-
         - Doesn't work behind meddling proxies (streaming)
         - Only pushes data (single direction unlike Web Sockets).
         - Only works well for data easily transportable over HTTP.
         - Can't perform as well as Web Sockets (HTTP overhead).
         ---
-        
+        # Demo
+
+        - This presentation uses SSE :)
+
+        ``` JavaScript
+        var slideshow = remark.create();
+        slideshow.on('showSlide', function (slide, e) {
+            $.getJSON('/slide?PageNumber=' + slide.getSlideIndex());
+        });
+        var source = new EventSource('/event-stream?channel=slideShow&t='
+            + new Date().getTime());
+        source.addEventListener('error', function (e) {
+            console.log("ERROR!", e);
+        }, false);
+
+        $(source).handleServerEvents({
+            handlers: {
+                GotoSlidePage: function (msg, e) {
+                    slideshow.gotoSlide(msg.PageNumber);
+                }
+            }
+        });
+        ```
+        ---
+        class: center, middle
+
+        # Thanks for your time.
+
     </textarea>
     <script src="js/remark.js">
     </script>
@@ -161,8 +249,7 @@
         slideshow.on('showSlide', function (slide, e) {
             $.getJSON('/slide?PageNumber=' + slide.getSlideIndex());
         });
-        var source = new EventSource('/event-stream?channel=channel&t=' + new Date().getTime());
-
+        var source = new EventSource('/event-stream?channel=slideShow&t=' + new Date().getTime());
         source.addEventListener('error', function (e) {
             console.log("ERROR!", e);
         }, false);
