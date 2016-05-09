@@ -111,6 +111,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="imgs\msg-example.png" />
     <Content Include="js\ie-shim.js" />
     <Content Include="imgs\support.png" />
     <Content Include="index.html" />

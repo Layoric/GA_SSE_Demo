@@ -86,12 +86,12 @@
         - Simple spec = Simple implementation
         - Many OSS Clients on GitHub
 
-        ### Servers
+        ### Lots of server options
         - [NodeJS](https://www.npmjs.com/package/sse)
         - [Ruby](http://api.rubyonrails.org/classes/ActionController/Live/SSE.html)
-        - [Spring (not great)]()
+        - [Spring Boot (not great)](http://docs.spring.io/spring/docs/4.2.3.RELEASE/javadoc-api/org/springframework/web/servlet/mvc/method/annotation/SseEmitter.html)
         - ASP.NET ([SignalR](http://www.asp.net/signalr/overview/getting-started/introduction-to-signalr), [ServiceStack](https://github.com/ServiceStack/ServiceStack/wiki/Server-Events))
-        - Can be implemented on virtually all HTTP server stacks.
+        - Can be implemented on virtually any HTTP server stacks.*
         - [~130 LoC Go implementation in a Gist](https://gist.github.com/ismasan/3fb75381cd2deb6bfa9c)!
 
         ---
@@ -114,6 +114,11 @@
         });
         ```
         - Message can be either text or structured (eg JSON), interpretation is up to client.
+        ---
+        # Chrome Tools integration
+        <img src="imgs/msg-example.png" width="700"/>
+        - Messages are separated by event
+        - Easy to work with structured `data`, SSE doesn't care.
         ---
         # NodeJS Server
         ``` JavaScript
@@ -212,6 +217,7 @@
         - Only pushes data (single direction unlike Web Sockets).
         - Only works well for data easily transportable over HTTP.
         - Can't perform as well as Web Sockets (HTTP overhead).
+        - Can be a bad fit on thread per request stacks if not handled properly.
         ---
         # Demo
 
